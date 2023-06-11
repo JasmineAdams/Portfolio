@@ -1,3 +1,3 @@
 # Portfolio
 
-* [Weather Reporting Research (HTML)](jasmineadams.github.io/Portfolio/)
+* [Weather Reporting Research (HTML)](https://jasmineadams.github.io/Portfolio/)
