@@ -1,0 +1,576 @@
+---
+output:
+ html_document:
+    css: "style.css"
+    toc: true
+    toc_float: true
+    latex_engine: xelatex
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{css, echo=FALSE}
+
+/* Body = whole document: */
+
+body{
+  font-family:"Avenir Next";
+  font-size: 12pt;
+  text-align:justify; 
+  text-justify:inter-character;
+}
+
+h1, h2 {
+  text-align:;
+  color: #0072B2;
+  font-weight:;
+  font-family:"Avenir Next";
+  font-size:17.5pt;
+}
+
+h3 {
+  text-align:;
+  color:#d35f12;
+  font-weight:;
+  font-family:"Avenir Next";
+  font-size:15pt;
+}
+/* #db6b33 */
+h4 {
+  text-align:;
+  color: #004080;
+  font-weight:;
+  font-family:"Avenir Next";
+}
+
+h5 {
+  text-align:;
+  color:#343434;
+  font-weight:bold;
+  font-family:"Avenir";
+  font-size:12pt;
+}
+
+hr {
+  border-width:2px;}
+p.small {
+  line height: "1";}
+p.med {
+  line height: "1.5";}
+p.large {
+  line height: "2.0";}
+  
+iframe:focus {
+  outline: none;
+}
+
+iframe[seamless] {
+  display: block;
+}
+
+/*
+background-color: #dcdcdc;
+line-height: 20pt
+```
+
+```{r import, include = F}
+library(dplyr)
+library(ggplot2)
+library(readr)
+
+rain <- read.csv("https://raw.githubusercontent.com/JasmineAdams/PPOL607/main/rainy.csv")
+```
+
+<br />
+
+<head>
+  <font size = "7">
+     Is it Raining Where You Are?
+  </font>
+  <br />
+ <font size = "5.8">
+   Comparing City and Local-Level Rainfall Conditions in Washington, DC 
+ </font>
+</head>
+
+<hr style="height:1.25px;
+           border-width:0;
+           color:#000000;
+           background-color:#999999;">
+
+<body>
+ <font size = "3">
+  <p style= class=large;">
+                Jasmine Adams<br />
+                December 12, 2022</p>  
+                  
+
+ </font>
+</body>
+  
+## Introduction<br />
+Your weather app doesn’t always match what you see when you look out the window. Despite considerable advances in weather reporting, the National Weather Service (NWS) --- the primary data source for all weather service providers in the United States --- struggles to maintain comparable accuracy and precision during periods of high volatility. Satellites, radars, and other forecasting tools synthesize complex weather patterns across large geographic areas and are not well suited for observing sudden changes in localized surface-level precipitation. In fact, radar – the NWS’s primary tool for measuring precipitation observed on the ground – does not measure surface-level rainfall at all. Instead, meteorologists infer how much it’s raining by emitting electromagnetic energy and analyzing the "echo" that precipitation particles reflect back. To improve the accuracy of its estimates, the NWS relies on a network of citizen volunteers who report daily precipitation and real-time changes in severe weather conditions.
+
+<br />
+<center>
+ <p style= "color:grey;">United States National Radar</p>
+</center>
+
+<p style="text-align:center;">
+ <img src = "https://radar.weather.gov/ridge/standard/CONUS_loop.gif" alt = "radar" style = "width: 600px;"/></p>
+
+<center>
+ [NATIONAL WEATHER SERVICE | Radar](https://radar.weather.gov/region/conus/standard)
+</center>
+<br />    
+  
+While reporting radar-predicted rainfall as rainfall "observed" at the surface isn’t exactly a Watergate-level scandal (especially when this information is on the NWS website), whether these more generalized estimates reflect localized weather patterns during periods of increased volatility has incredible implications for cities such as Washington, DC, where urban topography, impervious surfaces, and rising temperatures induced by climate change have led to accelerated rainfall volatility and interior flooding (Cone, 2012; DC Silver Jackets, 2017; Zahura & Goodall, 2022). This study thus aims to assess the extent to which hourly precipitation indicated by radar for the greater DC area represents observed weather conditions in DC neighborhoods by comparing the former to hourly rainfall measured by my personal weather station (PWS) in Dupont Circle (Figure 1).
+<br />
+<br />
+
+<font size = "2.75">
+ <p style= "font-family:Avenir; color:#595959;"><b>Figure 1 - Ambient Weather WS-7078 Smart Weather Station</b></p>
+</font>
+
+<img src = "https://raw.githubusercontent.com/JasmineAdams/File-Cabinet/73d3dc1fb3e97357c735c5836dc040c4b58d5bb7/Images/rg2.png" alt = "raingauge" style = "width: 250px; float: left;"/>
+
+<br />
+<br />
+
+```{r Rain Gauge, eval = T, echo = F, message = F, warning = F}
+
+rg <- data.frame("SensoryArray" = c(
+  "1  Antenna", 
+  "2  Rain collector", 
+  "3  UV / light sensor", 
+  "4  Mounting pole", 
+  "5  Mounting Base", 
+  "6  Balance indicator",
+  "7  Wind cups",
+  "8  Radiation shield",
+  "9  Wind vane")) 
+
+rg <- rg %>%
+  rename(`Sensory Array` = "SensoryArray")
+
+
+library(kableExtra)
+rg %>%
+  kbl() %>%
+  kable_minimal(html_font = "Avenir", font_size = 12, full_width = F)
+```
+
+<br />
+
+
+<br />
+<hr style="height:1.25px;
+           border-width:0;
+           color:#000000;
+           background-color:#999999;"><br />
+             
+
+## Data and Methods<br />
+Weather Underground is a weather service provider that reports live and historical weather data from a worldwide public network of personal weather stations. To keep track of my station’s reported weather conditions, I registered it on [wundergound.com](https://www.wunderground.com) on November 13 and began tracking outdoor weather conditions the following day.
+<br />
+
+
+[Official weather data for the Washington, DC metropolitan area](https://w1.weather.gov/data/obhistory/KDCA.html) are estimated via radar at the Washington/Baltimore regional weather station located at Reagan Nation Airport. Data are reported hourly and are not available beyond three days through any public source. Due to these reporting constraints, I had to grab data from their website at least once every three days to avoid any critical gaps in information. Though I managed to gather all necessary data from the NWS website, the PWS at home in Dupont Circle did not capture hourly rainfall data on November 27 due to human error (i.e., my roommate mistakenly moving the weather station just under our awning while I was away per my admittedly ambiguous instructions). To remedy this shortcoming and mitigate other potential measurement errors of which I am not aware, I cross reference my own data with data from two other nearby personal weather stations in the Weather Underground network located in Adams Morgan and just east of Dupont Circle, respectively.
+<br />
+<br />
+
+### Limitations<br />
+Unsurprisingly, this glorified science fair experiment came with some challenges and limitations. As alluded to before, radars and rain gauges measure rainfall through methods that are not apples to apples. While my home station and the Adams Morgan station have a rain gauge accuracy of ±7% and ±10% respectively, accuracy for the station east of Dupont and the radar at Reagan Nation Airport are unknown. Moreover, with limited information and quality control checks on other personal weather stations set ups, its plausible that those stations are vulnerable to other third party factors that may undermine the accuracy of their reports. Table 1 summarizes the data and design limitations of each data collection tool.
+
+<br />
+
+<h5>Table 1 -- Study Limitations</h5>
+
+<hr>
+
+```{r Station Comparison, eval = T, echo = F, message = F, warning = F}
+lim <- data.frame("WeatherStation" = c("Station Location", "Station Type", "Method of Rain Detection", "Position of Detected Rainfall", "Measurement Accuracy", "Risk of Roommate/Squirrel Interference"),
+               NWS = c("Regean Airport", "Unknown", "Radar", "Closer to Clouds", "Unknown", "Low"),
+               Home = c("N of Dupont", "WS-7078", "Rain Gauge", "Surface Level", "± 7%", "High"),
+               PWS1 = c("E of Dupont", "Unknown", "Rain Gauge", "Surface Level", "Unknown", "Medium"),
+               PWS2 = c("Adams Morgan", "WS-1400-IP", "Rain Gauge", "Surface Level", "± 10%", "Medium")
+)
+
+lim <- lim %>%
+  rename(`Weather Station` = "WeatherStation")
+
+library(kableExtra)
+lim %>%
+  kbl() %>%
+  kable_minimal("hover", html_font = "Avenir", font_size = 14.5)
+```
+<hr>
+<br />
+
+
+### Procedure<br />
+I copied data tables from the NWS and Weather Underground websites from November 14 - December 10 and placed them into excel for preliminary data cleaning. I then uploaded the data into R where I filtered for hours in which at least one station recorded 0.01 inches of rain or more. After gathering descriptive statistics for hours in which it rained (Table 2), I compared recorded precipitation amounts between each station using a series of OLS linear regressions. I also ran regressions to assess whether variations in recorded temperature, pressure, and humidity were comperable to the variation in measured precipitation.    
+<br />  
+
+
+###  Hypotheses<br />
+
+1. Although variation in measured rainfall between each station may be minimal, there is a statistically significant difference in rainfall reported by the NWS station and each of the other local stations.
+  
+2. Differences in measured rainfall between the three neighboring stations are smaller than between these stations and the NWS station.
+  
+3. Variation between my home station and the NWS station is greater for reported rainfall than for any other metric.  
+
+<br />
+
+<hr style="height:1.25px;
+           border-width:0;
+           color:#000000;
+           background-color:#999999;">
+           <br />
+
+## Results<br />
+There have been approximately seven rainy days since data collection began on November 14. Across those 7 days, there were 45 hours for which at least 0.01 inches of rain was recorded (6 of which occurred on November 27 when my PWS was not positioned to capture any rain). Although this sample size is large enough to conduct a statistically significant analysis, it is still quite small. Table 2 displays the daily accumulated precipitation measured by each station.
+
+<br />  
+
+<h5>Table 2 -- Daily Accumulated Precipitation (inches)</h5>
+
+<hr>
+
+```{r Row averages, include =F}
+
+# Row averages
+rain <- rain %>% 
+  mutate(rowavg = rowMeans(rain[,20:23], na.rm=TRUE)) 
+
+rain <- rain %>% 
+  mutate(rowavg = round(rain[,-1:-23,],3))
+```
+
+```{r Rainy Day Sample, include =F}
+
+#Sub-sampling
+rain <- rain %>% 
+  mutate(rainyd = rowavg != 0) 
+
+# A
+asample <- rain %>%
+  filter(rainyd == "TRUE")
+
+asample <- asample %>%
+  mutate(x = row_number(ID))
+
+# B
+bsample <- rain %>%
+  filter(rainyd == "TRUE" & Date != 27)
+
+bsample <- bsample %>%
+  mutate(x = row_number(ID))
+```
+
+```{r Join Month Date, echo = F, eval = T, message = F, warning = F}
+         
+# Joining the two columns for month and date
+library(stringr)
+rain$mdate <- do.call(str_c, c(rain[c("Month", "Date")], sep = " "))
+asample$mdate <- do.call(str_c, c(asample[c("Month", "Date")], sep = " "))
+bsample$mdate <- do.call(str_c, c(bsample[c("Month", "Date")], sep = " "))
+
+```
+
+```{r Summary Table, echo = F, eval = T, message = F, warning = F}
+  
+# Naming columns
+
+tblnames <- asample %>%
+  select(mdate, NRain, PRain, ORain, ARain, rowavg) %>%
+  rename("Date" = mdate, "NWS (DCA)" = NRain, "Home (Dupont)" = PRain, "East Dupont" = ORain, "Adams Morgan" = ARain, "Avg. Accum." = rowavg) 
+
+library(kableExtra)
+asample %>%
+  select(mdate, NRain, PRain, ORain, ARain, rowavg) %>%
+  group_by(mdate) %>%
+  summarise(sum(NRain), sum(PRain), sum(ORain), sum(ARain), sum(rowavg)) %>%
+  arrange(desc(mdate)) %>%
+  kbl(col.names = colnames(tblnames)) %>%
+  kable_minimal("hover", html_font = "Avenir", font_size = 14.5)
+                                                                  
+```
+
+<hr>
+<br />  
+As illustrated in Figure 2, aside from data collected on November 15, the neighborhood weather stations recorded a similar amount of rainfall. However, whether I keep or disregard outliers, particularly the two highest values recorded by my PWS, has notable implications for the estimated difference in hourly rainfall between stations. 
+
+<br />  
+
+<h5>Figure 2 -- Observed Hourly Precipitation (inches)</h5>
+
+```{r Scatter, echo = F, eval = T, message = F, warning = F}
+
+x <- asample %>%
+  select(x)
+
+x <- bsample %>%
+  select(x)
+
+as1 <- asample %>%
+  rename(NWS = NRain, Home = PRain, `E. Dupont` = ORain, `Adams Morgan` = ARain)
+bs1 <- bsample %>%
+  rename(NWS = NRain, Home = PRain, `E. Dupont` = ORain, `Adams Morgan` = ARain )
+
+
+library(plotly)
+gg <- ggplot(as1, aes(x)) +
+    geom_point(aes(y=NWS), 
+               colour="#e8ab30",
+               size=1.1,) + 
+    geom_point(aes(y=Home), 
+               colour="#c982c9",
+               size=1.1,) + 
+    geom_point(aes(y=`E. Dupont`), 
+               colour="#7db3e8",
+               size=1.1,) + 
+    geom_point(aes(y=`Adams Morgan`), 
+               colour= "#99d161",
+               size=1.1,) + 
+   labs(
+    x = '
+   1-Hour Period (sequential)',
+    y = 'Precipitation (inches)
+                   
+   '
+    ) +
+  theme_classic()+
+  theme(
+    text = element_text(family = 'Avenir Next'),
+    axis.text = element_text(size = 11),
+    axis.title = element_text(size = 11.5)
+    )
+
+ggplotly(gg)
+```
+
+<br />
+A quick boxplot reveals that there are five outliers ranging from approx. 0.22 - 0.8 that I would be statistically justified in excluding from the analysis. However, due to the small sample size, I only exclude the two hours for which my PWS measured over 0.6 inches of rainfall.
+
+<br />  
+
+<h5>Figure 3 -- Box Plot Distribution of Hourly Rainfall (Home Weather Station)</h5>
+
+```{r Box, echo = F, eval = T, message = F, warning = F}
+
+ggplot(bsample, aes(x=PRain)) + 
+  geom_boxplot(color='#a14573', 
+               fill='#a14573', 
+               alpha=.3,
+               outlier.colour="#a14573",
+               outlier.fill="#a14573",
+               outlier.size=3) +
+  labs(
+    x = ' 
+    Precipitation (inches)') +
+           theme_classic() + 
+              theme(
+                text = element_text(family = 'Avenir Next'),
+                axis.text = element_text(size = 11),
+                axis.title = element_text(size = 11.5),
+                plot.margin = margin(2,0,0,3, "cm"),
+                axis.line = element_line(size = .2)
+              )
+```
+
+<br />
+Similar to Figure 2, the line graph in Figure 4 illustrates recorded hourly rainfall excluding values above 0.6 inches. 
+
+<br />  
+
+<h5>Figure 4 -- Observed Hourly Precipitation (inches)</h5>
+
+```{r Line, echo = F, eval = T, message = F, warning = F}
+
+as2 <- as1 %>%
+  filter(Home <= 0.6)
+
+as2 <- as2 %>%
+  mutate(ra = rowavg) 
+  
+
+bs2 <- bs1 %>%
+  filter(Home <= 0.6)
+
+bs2 <- bsample %>%
+  mutate(ra = rowavg) 
+
+
+library(plotly)
+gg2 <- ggplot(as2, aes(x)) +
+           geom_line(aes(y=NWS), 
+               colour="#e8ab30",
+               size=.5,
+               alpha=.8) + # Gold
+           geom_line(aes(y=Home), 
+               colour="#5639ac",
+               size=.5,
+               alpha=.8) + # Purple
+           geom_line(aes(y=`E. Dupont`), 
+               colour="#7db3e8",
+               size=.5,
+               alpha=.8) + # Blue
+           geom_line(aes(y=`Adams Morgan`), 
+               colour= "#99d161",
+               size=.5,
+               alpha=.8) + # Green
+   labs(
+    x = '
+   1-Hour Period (sequential)',
+    y = 'Precipitation (inches)
+    '
+    ) +
+  theme_classic()+
+  theme(
+    text = element_text(family = 'Avenir Next'),
+    axis.text = element_text(size = 11),
+    axis.title = element_text(size = 11.5)
+    )
+
+ggplotly(gg2)
+```
+
+<br />
+
+#### Inferential Results
+According to the below t-test results, there is not a statistically significant difference between rainfall measured by the National Weather Station in Arlington, and rainfall measured at the three local personal weather stations. As such, my first hypothesis is incorrect.<br /><br />
+<h5>Table 3 -- T-Test Results: NWS Station vs. Personal Weather Stations</h5>
+<br />
+
+```{r,  include=F}
+
+nws1 <- asample  %>%
+  select(NRain)
+
+nws2 <- bs2  %>%
+  select(NRain)
+
+home <- bs2  %>%
+  select(PRain)
+
+admo <- asample  %>%
+  select(ARain)
+
+edup <- asample  %>%
+  select(ORain)
+```
+
+```{r ttests, include=F}
+library(tidyverse)
+library(jtools)
+library(kableExtra)
+library(tibble)
+library(huxtable)
+library(broom)
+
+ ma <- tidy(t.test(nws2, home)) %>% select(estimate1, estimate2, p.value) %>% rename("NWS Average" = estimate1, "Home Average" = estimate2, "p-value" = p.value) %>% kbl(digits = 3) %>% kable_minimal(html_font = "Avenir", full_width = T)
+ 
+ mb <- tidy(t.test(nws1, edup)) %>% select(estimate1, estimate2, p.value) %>% rename("NWS Average" = estimate1, "EDup Average" = estimate2, "p-value" = p.value) %>% kbl(digits = 3) %>% kable_minimal(html_font = "Avenir", full_width = T)
+ 
+ mc <- tidy(t.test(nws1, admo)) %>% select(estimate1, estimate2, p.value) %>% rename("NWS Average" = estimate1, "AdMo Average" = estimate2, "p-value" = p.value) %>% kbl(digits = 3) %>% kable_minimal(html_font = "Avenir", full_width = T) 
+ 
+```
+
+```{r display ttests, eval=T, echo=F, message = F, warning = T }
+ma
+mb
+mc
+```
+
+```{r Rain Regressions, include=F}
+# RAIN ACCURACY
+
+# Y = National, X = Personal
+m1 <- lm(NRain~PRain, data = bs2)
+# Adj Rsqr = 0.7555
+
+# Y = National, X = Other Dupont
+m2 <- lm(NRain~ORain, data = asample)
+# Adj Rsqr = 0.784
+
+# Y = National, X = AdMo
+m3 <- lm(NRain~ARain, data = asample)
+# Adj Rsqr = 0.9249
+
+# Y = Personal, X = Other Dupont
+m4 <- lm(PRain~ORain, data = bs2)
+# Adj Rsqr = 0.66 
+
+# Y = Personal, X = AdMo
+m5 <- lm(PRain~ARain, data = bs2)
+# Adj Rsqr = 0.85
+
+# Y = AdMo, X = Other Dupont
+m6 <- lm(ARain~ORain, data = asample)
+# Adj Rsqr = 0.82 
+
+```
+
+<br />
+
+Conducting a series of simple OLS regressions revealed that rainfall recorded by the NWS station, my Home station, and the station east of Dupont Circle were most correlated to rainfall reported by the station in Adams Morgan. Moreover, my Home station and the E. Dupont station were more correlated to the NWS station than they were to each other. As such, my second hypothesis is also incorrect.<br /><br />
+<h5>Table 4 -- OLS Results: Comparing Rainfall Measured by all Stations</h5>
+
+```{r summ, eval=T, echo=F, message = F, warning = T, results = 'asis'}
+
+
+export_summs(m1, m2, m3, m4, m5, m6,
+             scale = TRUE, 
+             model.names = c("NWS ","NWS  ","NWS","Home ","Home","Adams Morgan"),
+             coefs = c("Home"="PRain","E. Dupont"="ORain","Adams Morgan"="ARain"),
+             size="5px", 
+             font="Avenir Next") 
+             
+```
+
+
+```{r Other Metrics, include=F}
+# Temperature: Y = National, X = Personal
+temp <- lm(NTemp~PTemp, data = bs2)
+
+#  Dew Point: Y = National, X = Personal
+dew <- lm(NDew~PDew, data = bs2)
+
+# Pressure: Y = National, X = Personal
+press <- lm(NPressure~PPressure, data = bs2)
+
+
+# Humidity: Y = National, X = Personal
+humid <- lm(NHumidity~PHumidity, data = bs2)
+
+```
+
+<br />
+
+Finally, when comparing all weather measurements, it appears that the temperature, dew point, pressure, and humidity reported by both stations is highly comparable, with data measured by one station accounting for 91% - 100% of the variation in data collected by the other. Given that rainfall measured by the NWS station accounts for only 76% of the rainfall measured by the Home station, the final hypothesis is correct.<br /><br />
+
+<h5>Table 5 -- OLS Results: Comparing All Weather Measurements between the NWS and Home Station</h5>
+```{r, eval=T, echo=F, message = F, warning = T, results = 'asis'}
+export_summs(m1, temp, dew, press, humid,
+             scale = TRUE, 
+             model.names = c("NWS Rain", "NWS Temp","NWS Dew","NWS Pressure","NWS Humidiity"),
+             coefs = c("Home Rain" = "PRain", "Home Temp"="PTemp","Home Dew"="PDew","Home Pressure"="PPressure", "Home Humidity" = "PHumidity"),
+             size="5px", 
+             font="Avenir Next") 
+```
+<br />
+
+## Conclusion
+Results suggest that measured rainfall is not distinctly different between the NWS station at Reagan National Airport and personal weather stations in the Dupont Circle and Adams Morgan area. Granted, this study had many limitations. The weather stations’ sample sizes were quite small and two of them had unknown measurement errors. The study also took place during the Fall when temperatures are cooler and rainfall is generally less volatile. I recommend that future studies use year round data, or at least data collected during warmer periods, as that could reveal a different picture about how well NWS weather station reports reflect localized weather conditions experienced on the surface. 
+
+```{r, eval=T, echo=F, message = F, warning = T}
+
+```
+</body>
+</html>
+<br />
+<br />
+<br />
